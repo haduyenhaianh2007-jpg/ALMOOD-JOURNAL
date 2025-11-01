@@ -1,0 +1,18 @@
+# === File: .gitignore ===
+
+# Bỏ qua file nhạy cảm (CHỨA API KEY)
+.env
+
+# Bỏ qua các file cache của Python
+__pycache__/
+*.pyc
+
+# Bỏ qua các file dataset "sạch" (đã chế biến)
+# (DÒNG NÀY SẼ SỬA LỖI CỦA BẠN)
+data/processed/
+
+# Bỏ qua file log (chỉ lưu ở máy)
+logs/
+
+# Bỏ qua các file của Colab (nếu có)
+.ipynb_checkpoints/

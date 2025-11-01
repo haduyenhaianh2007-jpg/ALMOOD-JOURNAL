@@ -1,0 +1,13 @@
+# requirements.txt
+
+# Dùng cho AI Core và gọi API
+python-dotenv     # Để đọc API keys từ file .env
+requests          # Để gọi API Hugging Face
+openai            # Để gọi API OpenAI/GPT
+
+# Dùng cho phân tích và trực quan hóa (visualization)
+pandas            # Để xử lý, tổng hợp dữ liệu log
+matplotlib        # Thư viện vẽ biểu đồ nền tảng
+seaborn           # Giúp vẽ biểu đồ đẹp hơn
+numpy            # Xử lý số liệu, tính toán thống kê
+rich              # In bảng, màu sắc đẹp trong terminal
