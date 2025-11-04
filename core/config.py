@@ -1,31 +1,37 @@
 # core/config.py
 """
-Cấu hình trung tâm cho hệ thống AI Core.
-- Lưu thông tin model Hugging Face
-- Đọc API token từ file .env
-- Giúp mọi người làm việc an toàn, không lộ thông tin nhạy cảm
+Cấu hình trung tâm cho hệ thống AI Core. (Đã cập nhật Giai đoạn 4)
 """
 
 import os
 from dotenv import load_dotenv
 
-# Load file .env để lấy biến môi trường (token, config bí mật)
+# Load file .env để lấy biến môi trường
 load_dotenv()
 
-# Danh sách model dùng trong hệ thống
+# === SỬA LỖI 410 (Dùng API "Tối ưu" của bạn) ===
+# (API này chạy model 'Zonecb/my-phobert-sentiment-v1' đã fine-tune)
+SENTIMENT_API_URL = "https://zonecb-my-sentiment-api.hf.space/predict"
+
 HF_MODELS = {
-    "sentiment": "5CD-AI/Vietnamese-Sentiment-visobert",                 # Model phân tích cảm xúc tiếng Việt
-
-    "tone": "uitnlp/visobert"   # Model phân tích tone tiếng Việt (có thể đổi visobert)
+    "sentiment": SENTIMENT_API_URL, # <-- SỬA: Trỏ đến API (Giai đoạn 3)
+    
+    # (Tương lai: Bạn sẽ deploy Model 2 (7-lớp) và đặt link API vào đây)
+    "sentiment_detail": "LINK_API_MODEL_7_LOP_CUA_BAN_SAU_NAY", 
+    
+    "tone": "uitnlp/visobert" 
 }
-# OpenAI configs
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GPT_RESPONSE_MODEL_ID = os.getenv("GPT_RESPONSE_MODEL_ID", "gpt-4o-mini")  # Model GPT dùng cho response
-# Token Hugging Face — đọc tự động từ .env
-API_TOKEN = os.getenv("HF_API_TOKEN", "")
-#Tham số hệ thống
-DEFAULT_TONE = "neutral"        # tone mặc định khi model không xác định được (neutral, positive, negative)
-MAX_LEN = 512                   # Giới hạn độ dài input/output (tối đa token cho model)
-TIMEOUT = 30                    # Thời gian chờ tối đa khi gọi API (giây)
-CONF_THRESHOLD = 0.6            # Ngưỡng tin cậy tối thiểu cho sentiment / tone detection
 
+# === SỬA LỖI 429 (Chuyển sang Google) ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") # <-- THÊM: Đọc Google Key
+GPT_RESPONSE_MODEL_ID = os.getenv("GPT_RESPONSE_MODEL_ID", "gpt-4o-mini") 
+
+# Token Hugging Face (Dùng để xác thực API "Private" của bạn)
+API_TOKEN = os.getenv("HF_API_TOKEN", "")
+
+# Tham số hệ thống
+DEFAULT_TONE = "neutral"
+MAX_LEN = 512
+TIMEOUT = 30 # (Lưu ý: API "ngủ đông" của bạn có thể lỗi ở lần đầu)
+CONF_THRESHOLD = 0.6

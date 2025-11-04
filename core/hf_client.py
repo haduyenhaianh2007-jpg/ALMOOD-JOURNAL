@@ -1,124 +1,110 @@
 """
-core/hf_client.py
-Module giao tiếp với Hugging Face API và GPT API.
-- Gọi model sentiment / tone / response.
-- Trả kết quả dạng JSON chuẩn.
+core/hf_client.py (v4 - Đã sửa lỗi URL, Xác thực, và Lỗi Gemini)
+Module giao tiếp với API Space "tối ưu" và API Gemini.
 """
+import google.generativeai as genai
 from core.utils import clean_text, get_vn_timestamp
 from core.utils import append_jsonl, read_jsonl
 from core.prompts import SYSTEM_PROMPT
 from datetime import datetime, timezone, timedelta
 import requests
 from openai import OpenAI  
-from core.config import HF_MODELS, API_TOKEN, TIMEOUT, OPENAI_API_KEY, GPT_RESPONSE_MODEL_ID  
+from core.config import (
+    HF_MODELS, 
+    API_TOKEN, 
+    TIMEOUT, 
+    OPENAI_API_KEY, 
+    GPT_RESPONSE_MODEL_ID,
+    GOOGLE_API_KEY # <-- Key mới
+)
 
-# Header xác thực
+# Header xác thực (Dùng cho cả API HF và API Space "Private")
 HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
+# === Cấu hình Gemini (Chạy 1 lần) ===
+# (Sửa lỗi 'system_instruction' bằng cách đặt nó ở đây)
+genai.configure(api_key=GOOGLE_API_KEY)
+gemini_model = genai.GenerativeModel(
+    'gemini-2.5-flash',
+    system_instruction=SYSTEM_PROMPT # <-- Tính cách AI được đặt ở đây
+)
+# === Kết thúc Cấu hình Gemini ===
+
+
 def query_model(model_name: str, text: str):
+    """
+    Gọi model "sentiment" (của bạn) HOẶC model "response" (Gemini).
+    """
     text = clean_text(text)
-
-    """
-    Gọi model Hugging Face hoặc GPT tương ứng.
-    Trả về dict: {label, score, text, model}
-    """
-    #Lấy model ID từ config( nếu có)
-    model_id = HF_MODELS.get(model_name)
-    #Chỉ raise lỗi nếu model_name không phải GPT cũng không nằm trong HF_MODELS
-    if not model_id and model_name != "response":
-        raise ValueError(f"Model '{model_name}' không tồn tại trong HF_MODELS.")
-
-    url = f"https://api-inference.huggingface.co/models/{model_id}"
-    payload = {"inputs": text}
-
+    
     try:
-        # --- Nếu là model Hugging Face ---
-        if model_name in ["sentiment", "tone"]:
+        # --- Trường hợp 1: Model "sentiment" (Gọi API Space CỦA BẠN) ---
+        # (Đây là Giai đoạn 3)
+        if model_name == "sentiment":
+            
+            url = HF_MODELS.get(model_name)
+            if not url or "https://" not in url:
+                 return {"error": f"Lỗi Config: HF_MODELS['sentiment'] phải là 1 URL (https://.../predict). Kiểm tra core/config.py."}
+            
+            payload = {"text": text} # Payload chuẩn của FastAPI
+            
             response = requests.post(
                 url,
-                headers=HEADERS,
+                headers=HEADERS, # Sửa lỗi 403 (Xác thực)
                 json=payload,
                 timeout=TIMEOUT
             )
             response.raise_for_status()
             data = response.json()
-
-            # Trích xuất label & score
-            # Một số model Hugging Face trả về list lồng nhau [[{...}]], nên cần kiểm tra kỹ.
-            if isinstance(data,list):
-                #Nếu list rỗng
-                if not data:
-                    return {"error": f"Không có dữ liệu trả về từ model {model_name}."} 
-                #Nếu là list lông nhau
-                if isinstance(data[0], list):
-                    result = data[0][0]
-                else:
-                    result = data[0]
-            else:
-                result = data
-            #Bảo vệ lỗi nếu không có key label/score
-            label = result.get("label", "unknown")
-            score = round(result.get("score", 0.0), 3)
-
-            return {
-                "label": label,      # Nhãn phân loại
-                "score": score,      # Điểm tin cậy
-                "model": model_id    # Model ID
-            }
-        # --- Nếu là GPT response model ---
-        elif model_name == "response":
-            #Gọi Student Mood GPT qua OpenAI client
-            client = OpenAI(api_key=OPENAI_API_KEY)
-            # === Prompt định nghĩa tính cách Student Mood GPT ===
             
-            gpt_response = client.chat.completions.create(
-                model=GPT_RESPONSE_MODEL_ID,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": text},
-                ],
-            )
+            label = data.get("label", "unknown")
+            score = round(data.get("score", 0.0), 3)
 
-
-            gpt_message = gpt_response.choices[0].message.content.strip()
-            cleaned_text = (
-                gpt_message
-                .encode('utf-8', 'ignore')  # đảm bảo mã hóa
-                .decode('utf-8')            # chuyển lại string
-                .replace("\\n", "\n")       # chuyển \n thành thật sự xuống dòng
-                .replace("\u200d", "")      # xóa ký tự invisible joiner
-                .strip()                    # loại bỏ khoảng trắng dư
-            )
-            # --- Lấy thời gian Việt Nam ---
-            vn_time = datetime.now(timezone.utc) + timedelta(hours=7)
-            formatted_time = vn_time.strftime("%d/%m/%Y %H:%M:%S")
             return {
-                "text": gpt_message.strip().replace("\\n", "\n"),   # xuống dòng thật
-                "source": "student_mood_gpt",
-                "timestamp": formatted_time
+                "label": label,
+                "score": score,
+                "model": url
             }
 
-        # --- Nếu chưa biết loại model ---
+        # --- Trường hợp 2: Model "sentiment_detail" (Model 7-lớp tương lai) ---
+        # (Logic này giống hệt "sentiment", nhưng gọi key khác)
+        elif model_name == "sentiment_detail":
+            url = HF_MODELS.get(model_name)
+            if not url or "https://" not in url:
+                return {"error": f"Model 7-lớp (sentiment_detail) chưa được deploy."}
+            
+            payload = {"text": text}
+            response = requests.post(url, headers=HEADERS, json=payload, timeout=TIMEOUT)
+            response.raise_for_status()
+            data = response.json()
+            # (Chúng ta chỉ cần 'label', không cần 'score')
+            return {"label": data.get("label", "unknown")}
+
+        # --- Trường hợp 3: Model "response" (Sửa lỗi 429 - Gọi Google Gemini) ---
+        elif model_name == "response":
+            
+            response = gemini_model.generate_content(
+                text, # 'text' ở đây chính là context_prompt
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                )
+            )
+            gemini_message = response.text
+            
+            return {
+                "text": gemini_message.strip().replace("\\n", "\n"),
+                "source": "google_gemini_2.5_flash",
+                "timestamp": get_vn_timestamp() 
+            }
+
+        # --- Trường hợp 4: Lỗi ---
         else:
             return {"error": f"Model '{model_name}' không được hỗ trợ."}
 
+    # --- Xử lý Lỗi chung (Timeout, v.v.) ---
     except requests.exceptions.Timeout:
-        return {"error": f"Timeout khi gọi model {model_name}."}
+        return {"error": f"Timeout (Quá 30s) khi gọi model {model_name}."}
     except requests.exceptions.RequestException as e:
         return {"error": f"Lỗi khi gọi model {model_name}: {e}"}
     except Exception as e:
         return {"error": f"Lỗi parse dữ liệu từ {model_name}: {e}"}
-    return format_response("response", gpt_message)
-def format_response(model_name, message_text):
-    """Tạo JSON chuẩn để frontend dùng trực tiếp"""
-    from datetime import datetime, timedelta, timezone
-
-    vn_time = datetime.now(timezone.utc) + timedelta(hours=7)
-    formatted_time = vn_time.strftime("%d/%m/%Y %H:%M:%S")
-
-    return {
-        "model": model_name,
-        "text": message_text.strip().replace("\\n", "\n"),
-        "source": "student_mood_gpt",
-        "timestamp": formatted_time
-    }
