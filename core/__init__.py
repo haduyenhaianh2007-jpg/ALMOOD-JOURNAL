@@ -1,1 +1,0 @@
-# make core a package
