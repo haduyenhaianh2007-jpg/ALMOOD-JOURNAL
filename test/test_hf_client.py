@@ -1,70 +1,68 @@
 """
-test_hf_client.py
-Unit test cho hf_client.py — kiểm tra logic xử lý mà không cần mạng.
+Unit test cho hf_client.py (phiên bản sentiment v2)
+Đảm bảo hoạt động ổn định với cấu trúc trả về mới (predicted_label, label_distribution, ...).
 """
 
-import sys, os #nhập module sys, truy cập các hàm và biến liên quan đến trình thông dịch Python và hệ điều hành
-#nhập module os, cung cấp các hàm để tương tác với hệ điều hành
-import pytest #framwork test tự động trong Python
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
-#Thêm đường dẫn tới thư mục gốc để import module core
+import sys, os
+import pytest
 
-from core.hf_client import query_model #import hàm query_model từ module core.hf_client
+# Thêm đường dẫn để import core
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- Test sentiment (mock Hugging Face API) ---
-def test_sentiment_model(monkeypatch): #kiểm tra hàm query_model với model sentiment nhưng không gọi API thật
-    """Giả lập phản hồi từ Hugging Face, kiểm tra parse JSON và format."""
+from core.hf_client import query_model
+
+
+# --- TEST 1: Sentiment model ---
+def test_sentiment_model(monkeypatch):
+    """Giả lập phản hồi từ Hugging Face Space, kiểm tra tính toán softmax & cấu trúc."""
     import requests
 
     class MockResponse:
-        def __init__(self): self.status_code = 200
-        def raise_for_status(self): pass
-        def json(self): return [{"label": "positive", "score": 0.98}]
-        #Giống như server trả về: [{"label": "positive", "score": 0.98}]
-    monkeypatch.setattr(requests, "post", lambda *a, **k: MockResponse())
-    #Patch” tạm thời hàm requests.post thành mock function, để test chạy offline.
-    result = query_model("sentiment", "I am happy!") #Gọi hàm thật, nhưng dữ liệu đầu vào và phản hồi đều giả.
-    assert result["label"] == "positive"
-    assert abs(result["score"] - 0.98) < 1e-3
-#So sánh dữ liệu đầu ra có đúng định dạng không.
-#Nếu sai, pytest sẽ báo lỗi: AssertionError.
-#-----------------------------------------------------------#
-
-# --- Test GPT response (mock OpenAI API) ---
-def test_response_model(monkeypatch): #Kiểm tra nhánh GPT (response) trong query_model().
-    """Giả lập phản hồi từ GPT client để kiểm tra format."""
-    import core.hf_client as hf #nhập module hf_client nhưng gọi là hf để tránh trùng tên
-
-    class MockChoices:
         def __init__(self):
-            self.message = type("msg", (), {"content": "Xin chào, tôi là Student Mood GPT!"})
-        #Giả lập gpt_response.choices[0].message.content.
-    class MockResponse:
-        def __init__(self): self.choices = [MockChoices()]
-        #Giống như gpt_response thật từ API.
-    class MockClient:
-        def __init__(self, api_key=None): pass
-        class chat:
-            class completions:
-                @staticmethod
-                def create(*a, **k): return MockResponse()
-         #Tạo client giả để trả về MockResponse.
-    hf.OpenAI = MockClient #Gắn client giả vào module thật → query_model() sẽ chạy nhưng không gọi mạng.
+            self.status_code = 200
+        def raise_for_status(self): pass
+        def json(self):
+            return {"predicted_label": "positive", "raw_logits": [[-0.5, 0.2, 2.3]]}
+
+    monkeypatch.setattr(requests, "post", lambda *a, **k: MockResponse())
+
+    result = query_model("sentiment", "Hôm nay tôi rất vui!")
+
+    # Kiểm tra key & dữ liệu
+    assert "predicted_label" in result
+    assert isinstance(result["label_distribution"], dict)
+    assert abs(sum(result["label_distribution"].values()) - 100) < 1e-3
+    print("\n[TEST SENTIMENT]", result)
+
+
+# --- TEST 2: Response (Gemini) ---
+def test_response_model(monkeypatch):
+    """Giả lập phản hồi từ Gemini để test format."""
+    import core.hf_client as hf
+
+    class MockGenerativeModel:
+        def generate_content(self, text, generation_config=None):
+            class Resp:
+                text = "Xin chào, tôi là Student Mood GPT!"
+            return Resp()
+
+    hf.gemini_model = MockGenerativeModel()
+
     result = query_model("response", "Hello!")
-    assert result["source"] == "student_mood_gpt"
     assert "text" in result
-    #Kiểm tra JSON trả về đúng cấu trúc (text + model).
-# --- Test lỗi model không tồn tại ---
+    assert result["source"] == "google_gemini_2.5_flash"
+    print("\n[TEST RESPONSE]", result)
+
+
+# --- TEST 3: Model không tồn tại ---
 def test_invalid_model():
-    """Kiểm tra khi model không nằm trong config."""
-    with pytest.raises(ValueError):
-        query_model("unknown", "test")
-#Kiểm tra xử lý ngoại lệ trong trường hợp model không có trong HF_MODELS
-# -------------------------------------------------------
-#  Cho phép chạy trực tiếp bằng lệnh:
-# python -m test.test_hf_client
-# -------------------------------------------------------
+    """Kiểm tra xử lý khi model không nằm trong danh sách hỗ trợ."""
+    result = query_model("unknown", "test")
+    assert "error" in result
+    assert "không được hỗ trợ" in result["error"]
+    print("\n[TEST INVALID]", result)
+
+
+# --- Cho phép chạy trực tiếp ---
 if __name__ == "__main__":
-    import pytest
-    # Chạy toàn bộ các test trong file này
     pytest.main(["-v", __file__])

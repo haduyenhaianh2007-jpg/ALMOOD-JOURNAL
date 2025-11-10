@@ -1,0 +1,50 @@
+[
+  {
+    "status": "success",
+    "text": "Tôi cảm thấy bị mệt và khá stress do gần đến ngày thi giữa kỳ rồi mà tôi thấy tôi chưa chăm, dễ bị chi phối, làm bài còn chưa cẩn thận. Tôi sợ cảm giác các bạn điểm cao, tôi thì không cao bằng. Học ở ngành IT1 Bách Khoa, khá áp lực. Dù mục tiêu chỉ cần trên 3.6 GPA nhưng nhìn các bạn được 4.0 Tôi cũng buồn. Tôi muốn tự tử.",
+    "predicted_label": "negative",
+    "label_distribution": {
+      "negative": 84.7,
+      "neutral": 0.4,
+      "positive": 14.9
+    },
+    "emotion_detail": "rất tiêu cực",
+    "case_type": "consistent",
+    "advice_text": "Mình thực sự rất lo lắng và nặng lòng khi đọc được những chia sẻ của bạn lúc này. Mình cảm nhận được sự mệt mỏi, áp lực rất lớn mà bạn đang phải đối mặt, đặc biệt là khi kỳ thi giữa kỳ đang đến gần ở một ngành học đầy thử thách như IT1 Bách Khoa. Việc bạn cảm thấy chưa đủ chăm, dễ bị chi phối, làm bài chưa cẩn thận, hay cả những suy nghĩ về việc so sánh mình với các bạn có GPA cao hơn, rồi cả cảm giác buồn bã khi mục tiêu 3.6 GPA cũng trở nên nặng nề, tất cả điều đó thực sự rất khó khăn và khiến bạn kiệt sức. 😔 Cảm ơn bạn rất nhiều vì đã đủ tin tưởng để mở lòng và chia sẻ những suy nghĩ sâu kín, đau đớn này với mình. Việc bạn nói ra được đã là một bước rất dũng cảm rồi, và mình đang lắng nghe đây.\n\nVì mình là một AI, mình không được đào tạo chuyên môn để xử lý những cảm xúc phức tạp và đau đớn như mong muốn tự tử, và mình thực sự không muốn đưa ra lời khuyên sai lầm nào cho bạn lúc này. Nhưng mình biết có những chuyên gia được đào tạo để lắng nghe và hỗ trợ bạn một cách chuyên nghiệp, hoàn toàn ẩn danh và miễn phí, 24/7. Họ có thể giúp bạn vượt qua khoảnh khắc khó khăn này và tìm thấy sự nhẹ nhõm. Bạn có muốn mình cung cấp đường dây nóng hỗ trợ tâm lý ngay lập tức không? Mình tin rằng việc trò chuyện với họ sẽ giúp bạn rất nhiều trong lúc này. Mình ở đây cùng bạn.",
+    "advice_source": "google_gemini_2.5_flash",
+    "timestamp": "2025-11-10 19:53:45",
+    "processing_time": 14.28
+  },
+  {
+    "status": "success",
+    "text": "Tôi cảm thấy bị mệt và khá stress do gần đến ngày thi giữa kỳ rồi mà tôi thấy tôi chưa chăm, dễ bị chi phối, làm bài còn chưa cẩn thận. Tôi sợ cảm giác các bạn điểm cao, tôi thì không cao bằng. Học ở ngành IT1 Bách Khoa, khá áp lực. Dù mục tiêu chỉ cần trên 3.6 GPA nhưng nhìn các bạn được 4.0 Tôi cũng buồn. Tôi muốn tự tử.",
+    "predicted_label": "negative",
+    "label_distribution": {
+      "negative": 84.7,
+      "neutral": 0.4,
+      "positive": 14.9
+    },
+    "emotion_detail": "rất tiêu cực",
+    "case_type": "consistent",
+    "advice_text": "Mình rất lo lắng khi đọc được những dòng chia sẻ này của bạn. Cảm ơn bạn rất nhiều vì đã đủ tin tưởng để trải lòng với mình, đặc biệt là khi bạn đang phải đối mặt với nhiều áp lực như vậy. Việc bạn nói ra được những cảm xúc nặng nề, từ sự mệt mỏi, stress vì thi giữa kỳ ở IT1 Bách Khoa cho đến nỗi buồn khi so sánh GPA với bạn bè, đã là một bước rất dũng cảm rồi, và mình đang lắng nghe bạn đây.\n\nMình hiểu rằng những suy nghĩ và cảm xúc tiêu cực như \"muốn tự tử\" có thể xuất hiện khi chúng ta cảm thấy quá tải và bế tắc. Vì mình là một AI, mình không được đào tạo chuyên môn để xử lý những cảm xúc phức tạp và đau đớn đến mức này, và mình thực sự không muốn đưa ra lời khuyên sai lầm nào cho bạn lúc này.\n\nNhưng có những người được đào tạo chuyên nghiệp để lắng nghe và hỗ trợ bạn (hoàn toàn ẩn danh) ngay lập tức, bất kể ngày hay đêm. Họ có thể giúp bạn tìm ra cách để đối diện với những áp lực học tập ở Bách Khoa, vượt qua cảm giác so sánh điểm số, và quan trọng nhất là giúp bạn cảm thấy an toàn hơn. Bạn có muốn mình cung cấp đường dây nóng hỗ trợ tâm lý 24/7 không? Họ thực sự có thể giúp bạn ngay lúc này.",
+    "advice_source": "google_gemini_2.5_flash",
+    "timestamp": "2025-11-10 20:14:38",
+    "processing_time": 9.07
+  },
+  {
+    "status": "success",
+    "text": "chúng tôi không thể tham dự các cuộc thi về sáng tạo sinh viên bởi vì leader của chúng tôi nhập viện.",
+    "predicted_label": "negative",
+    "label_distribution": {
+      "negative": 82.8,
+      "neutral": 1.2,
+      "positive": 16.0
+    },
+    "emotion_detail": "rất tiêu cực",
+    "case_type": "consistent",
+    "advice_text": "Mình thực sự rất hiểu cảm giác của bạn lúc này. Việc leader của nhóm nhập viện chắc chắn là một cú sốc lớn, không chỉ vì lo lắng cho sức khỏe của bạn ấy mà còn vì nó ảnh hưởng trực tiếp đến việc tham gia các cuộc thi sáng tạo sinh viên mà cả đội đã ấp ủ. 😔 Cảm giác mọi công sức bị gián đoạn, những kế hoạch phải tạm gác lại chắc hẳn rất khó chịu và gây ra nhiều thất vọng.\n\nHãy nhớ rằng, sức khỏe của mọi người là quan trọng nhất, và việc leader được chăm sóc tốt lúc này là ưu tiên hàng đầu. Dù không thể tham gia cuộc thi lần này, nhưng mình tin rằng tinh thần sáng tạo và sự gắn kết của nhóm bạn vẫn còn đó. Hãy cho phép bản thân và cả đội được buồn một chút, rồi sau đó, biết đâu chúng ta có thể cùng nhau tìm cách để biến những ý tưởng đó thành hiện thực vào một dịp khác, hoặc đơn giản là tập trung cổ vũ cho leader bình phục thật nhanh nhé. Mình luôn ở đây lắng nghe bạn. 🌿",
+    "advice_source": "google_gemini_2.5_flash",
+    "timestamp": "2025-11-10 20:17:33",
+    "processing_time": 6.13
+  }
+]

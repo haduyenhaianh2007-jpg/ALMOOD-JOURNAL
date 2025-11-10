@@ -1,109 +1,128 @@
 """
-core/hf_client.py (v4 - Đã sửa lỗi URL, Xác thực, và Lỗi Gemini)
-Module giao tiếp với API Space "tối ưu" và API Gemini.
+core/hf_client.py (Giai đoạn 5 – Sentiment v2, không có 7 lớp)
 """
+from dotenv import load_dotenv
+load_dotenv()
 import google.generativeai as genai
+import os
 from core.utils import clean_text, get_vn_timestamp
-from core.utils import append_jsonl, read_jsonl
 from core.prompts import SYSTEM_PROMPT
-from datetime import datetime, timezone, timedelta
 import requests
-from openai import OpenAI  
+import torch
+import numpy as np
+import torch.nn.functional as F
 from core.config import (
-    HF_MODELS, 
-    API_TOKEN, 
-    TIMEOUT, 
-    OPENAI_API_KEY, 
+    API_TOKEN,
+    TIMEOUT,
+    OPENAI_API_KEY,
     GPT_RESPONSE_MODEL_ID,
-    GOOGLE_API_KEY # <-- Key mới
+    GOOGLE_API_KEY,
+    SENTIMENT_API_URL,
+    SENTIMENT_MODEL_NAME,
+    LABELS,
+    SOFTMAX_TEMPERATURE,
+    ROUND_DECIMALS,
+    EMOTION_MAP
 )
 
-# Header xác thực (Dùng cho cả API HF và API Space "Private")
+# Header xác thực (cho cả API Hugging Face Space nếu private)
 HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
-# === Cấu hình Gemini (Chạy 1 lần) ===
-# (Sửa lỗi 'system_instruction' bằng cách đặt nó ở đây)
-genai.configure(api_key=GOOGLE_API_KEY)
+# === Cấu hình Gemini ===
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 gemini_model = genai.GenerativeModel(
     'gemini-2.5-flash',
-    system_instruction=SYSTEM_PROMPT # <-- Tính cách AI được đặt ở đây
+    system_instruction=SYSTEM_PROMPT
 )
-# === Kết thúc Cấu hình Gemini ===
 
-
+# === Hàm chính ===
 def query_model(model_name: str, text: str):
     """
-    Gọi model "sentiment" (của bạn) HOẶC model "response" (Gemini).
+    Gọi model 'sentiment' hoặc 'response'.
+    - Sentiment: gọi Hugging Face Space, tính softmax, trả tỉ lệ % từng nhãn.
+    - Response: gọi Gemini để sinh phản hồi.
     """
     text = clean_text(text)
     
     try:
-        # --- Trường hợp 1: Model "sentiment" (Gọi API Space CỦA BẠN) ---
-        # (Đây là Giai đoạn 3)
+        # --- Model 1: Sentiment ---
         if model_name == "sentiment":
-            
-            url = HF_MODELS.get(model_name)
-            if not url or "https://" not in url:
-                 return {"error": f"Lỗi Config: HF_MODELS['sentiment'] phải là 1 URL (https://.../predict). Kiểm tra core/config.py."}
-            
-            payload = {"text": text} # Payload chuẩn của FastAPI
-            
-            response = requests.post(
-                url,
-                headers=HEADERS, # Sửa lỗi 403 (Xác thực)
-                json=payload,
-                timeout=TIMEOUT
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            label = data.get("label", "unknown")
-            score = round(data.get("score", 0.0), 3)
-
-            return {
-                "label": label,
-                "score": score,
-                "model": url
-            }
-
-        # --- Trường hợp 2: Model "sentiment_detail" (Model 7-lớp tương lai) ---
-        # (Logic này giống hệt "sentiment", nhưng gọi key khác)
-        elif model_name == "sentiment_detail":
-            url = HF_MODELS.get(model_name)
-            if not url or "https://" not in url:
-                return {"error": f"Model 7-lớp (sentiment_detail) chưa được deploy."}
-            
+            url = SENTIMENT_API_URL
             payload = {"text": text}
+
             response = requests.post(url, headers=HEADERS, json=payload, timeout=TIMEOUT)
             response.raise_for_status()
             data = response.json()
-            # (Chúng ta chỉ cần 'label', không cần 'score')
-            return {"label": data.get("label", "unknown")}
 
-        # --- Trường hợp 3: Model "response" (Sửa lỗi 429 - Gọi Google Gemini) ---
+            logits = data.get("raw_logits") or data.get("logits") or data.get("scores")
+            label = data.get("predicted_label") or data.get("label")
+
+            if logits:
+                # Ép logits thành mảng phẳng 1D, tránh lỗi nested list
+                try:
+                    logits_tensor = torch.tensor(logits, dtype=torch.float32).flatten()
+                    probs = F.softmax(logits_tensor / SOFTMAX_TEMPERATURE, dim=-1)
+                    probs = probs.detach().cpu().numpy()  # chuyển sang numpy để tính toán dễ
+                except Exception as e:
+                    return {"error": f"Lỗi parse dữ liệu từ sentiment: {e}"}
+
+                # Tính phần trăm mỗi nhãn
+                label_distribution = {
+                    LABELS[i]: round(float(p) * 100, ROUND_DECIMALS)
+                    for i, p in enumerate(probs)
+                }
+                # Đảm bảo tổng = 100%
+                total = sum(label_distribution.values())
+                if total != 100:
+                    correction = 100 - total
+                    largest_label = max(label_distribution, key=label_distribution.get)
+                    label_distribution[largest_label] = round(label_distribution[largest_label] + correction, ROUND_DECIMALS)
+
+                predicted_label = max(label_distribution, key=label_distribution.get)
+                emotion_detail = EMOTION_MAP.get(predicted_label, "")
+
+                return {
+                    "input": text,
+                    "predicted_label": predicted_label,
+                    "label_distribution": label_distribution,
+                    "emotion_detail": emotion_detail,
+                    "model": SENTIMENT_MODEL_NAME,
+                    "timestamp": get_vn_timestamp(),
+                }
+
+            elif label:
+                emotion_detail = EMOTION_MAP.get(label, "")
+                print(f"[Sentiment] {label.upper()} (no logits) → 100%")
+                return {
+                    "input": text,
+                    "predicted_label": label,
+                    "label_distribution": {label: 100.0},
+                    "emotion_detail": emotion_detail,
+                    "model": SENTIMENT_MODEL_NAME,
+                    "timestamp": get_vn_timestamp()
+                }
+
+            else:
+                return {"error": f"Không tìm thấy logits hoặc label từ API {url}"}
+
+        # --- Model 2: Response (Gemini) ---
         elif model_name == "response":
-            
             response = gemini_model.generate_content(
-                text, # 'text' ở đây chính là context_prompt
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.7,
-                )
+                text,
+                generation_config=genai.types.GenerationConfig(temperature=0.7),
             )
             gemini_message = response.text
-            
             return {
                 "text": gemini_message.strip().replace("\\n", "\n"),
                 "source": "google_gemini_2.5_flash",
-                "timestamp": get_vn_timestamp() 
+                "timestamp": get_vn_timestamp()
             }
 
-        # --- Trường hợp 4: Lỗi ---
         else:
             return {"error": f"Model '{model_name}' không được hỗ trợ."}
 
-    # --- Xử lý Lỗi chung (Timeout, v.v.) ---
     except requests.exceptions.Timeout:
-        return {"error": f"Timeout (Quá 30s) khi gọi model {model_name}."}
+        return {"error": f"Timeout khi gọi model {model_name}."}
     except requests.exceptions.RequestException as e:
         return {"error": f"Lỗi khi gọi model {model_name}: {e}"}
     except Exception as e:
