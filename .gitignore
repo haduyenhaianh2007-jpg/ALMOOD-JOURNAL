@@ -16,3 +16,4 @@ logs/
 
 # Bỏ qua các file của Colab (nếu có)
 .ipynb_checkpoints/
+.env
